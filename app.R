@@ -1,4 +1,4 @@
-# EH's editted versio of GM's orginal code
+# EH's editted version of GM's orginal code
 
 library(shiny)
 library(shinycssloaders)
@@ -7,7 +7,7 @@ library(dplyr)
 library(dbplyr)
 library(RSQLite)
 
-# Define UI for application that draws a histogram
+# Define UI for application
 ui<- dashboardPage(
   dashboardHeader(title = "Quantifying the contribution of specific blood cell types to whole blood DNA methylation profiles", titleWidth = 1300),
   dashboardSidebar(disable=TRUE),
@@ -45,9 +45,14 @@ ui<- dashboardPage(
              ),
              
              box(
-               title=uiOutput("scattertitle"), width=NULL,
-               withSpinner(plotOutput("scatterplots"))
+               title=uiOutput("scattertitle1"), width=NULL, height=500,
+               withSpinner(plotOutput("scatterplots1"))
+             ),
+	     box(
+               title=uiOutput("scattertitle2"), width=NULL, height=250,
+               withSpinner(plotOutput("scatterplots2"))
              )
+	     
           )
     )
   )
@@ -91,23 +96,32 @@ server <- function(input, output) {
   output$boxplottitle<-renderUI({paste("Distribution of DNA Methylation levels at ",input$probe,"across cell & tissue types")})
 
   
-  output$scatterplots <- renderPlot({
-    par(mfrow=c(2,4))
+  output$scatterplots1 <- renderPlot({
+    par(mfrow=c(2,3))
     probebetas<-findprobebetas()
-    for (each in celltypes){
-		if (each != "Whole.Blood"){
+    for (each in c("B.cells","CD4.T.cells","CD8.T.cells","Granulocytes","Monocytes")){
+		r<-signif(cor(probebetas[,"Whole.Blood"], probebetas[,each], use="complete"),3)
+      
+		plot(probebetas[,"Whole.Blood"], probebetas[,each],  xlab="Whole Blood", ylab = each, pch=20, col=cols[each], 
+           cex.lab=1.4, cex.main=1.2, main=paste("r =",r))
+	}
+  output$scattertitle1<-renderUI({paste("Co-variation between whole blood and blood cell types at ",input$probe)})
+	  
+  output$scatterplots2 <- renderPlot({
+    par(mfrow=c(1,3))
+    probebetas<-findprobebetas()
+    for (each in c("Buccal", "Nasal"){
             
 			r<-signif(cor(probebetas[,"Whole.Blood"], probebetas[,each], use="complete"),3)
       
 			plot(probebetas[,"Whole.Blood"], probebetas[,each],  xlab="Whole Blood", ylab = each, pch=20, col=cols[each], 
            cex.lab=1.4, cex.main=1.2, main=paste("r =",r))
-		}	
-	}
+	}	  
     
   }, height=400, width=800)
   
-  output$scattertitle<-renderUI({paste("Co-variation between whole blood and blood cell types at ",input$probe)})
-  
+
+  output$scattertitle2<-renderUI({paste("Co-variation between peripheral tissue types at ",input$probe)})
   
   output$downloadtext <- renderText({paste("Download summary statistics for multiple CpGs", input$probe)})
   
