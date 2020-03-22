@@ -20,7 +20,10 @@ ui<- dashboardPage(
                 br(),br(),
                 "The DNA methylation data behind this tool were generated with Illumina EPIC array data from 30 individuals. Each participant provided a whole blood, buccal epithelial and nasal epithelial sample. Whole blood samples were processed using fluorescence-activated cell sorting (FACS) to purify and isolate five cell-types (monocytes, granulocytes, CD4 T-cells, CD8 T-cells, and B-cells). These data are described in our manuscript which is currently under review.",
                 br(),br(),
-                textInput("probe", "EPIC array CpG ID:", value="cg10142008")
+                textInput("probe", "EPIC array CpG ID:", value="cg10142008"),
+				textOutput("downloadtext"),
+              HTML("<br/>"),
+              downloadButton("downloaddata1","Download summary statistics")
   
              ),
       
@@ -34,7 +37,7 @@ ui<- dashboardPage(
                          ".csv")),
               textOutput("downloadtext"),
               HTML("<br/>"),
-              downloadButton("downloaddata","Download summary statistics")
+              downloadButton("downloaddata2","Download summary statistics")
             )
           ),
 
@@ -79,9 +82,16 @@ server <- function(input, output) {
   
   summarydata<-reactive({
     tmp<-dbGetQuery(my_db, 'SELECT * FROM sumStats WHERE row_names == ?', params = c(input$probe))
-    summary<-tmp
-    return(summary)
+    return(tmp)
   })
+  
+  batchdata<-reactive({
+	dat<-read.csv(input$file1$datapath, stringsAsFactors = FALSE, row.names = NULL)
+	tmp<-dbGetQuery(my_db, 'SELECT * FROM sumStats WHERE row_names == ?', params = list(x = dat[,1]))
+    return(tmp)
+  })
+  
+ 
   
   cols<-rainbow(8) 
   names(cols)<-celltypes
@@ -105,33 +115,49 @@ server <- function(input, output) {
 		plot(probebetas[,"Whole.Blood"], probebetas[,each],  xlab="Whole Blood", ylab = each, pch=20, col=cols[each], 
            cex.lab=1.4, cex.main=1.2, main=paste("r =",r))
 	}
+	}, height=600, width=800)
+	
   output$scattertitle1<-renderUI({paste("Co-variation between whole blood and blood cell types at ",input$probe)})
 	  
   output$scatterplots2 <- renderPlot({
     par(mfrow=c(1,3))
     probebetas<-findprobebetas()
-    for (each in c("Buccal", "Nasal"){
+    for (each in c("Buccal", "Nasal")){
             
 			r<-signif(cor(probebetas[,"Whole.Blood"], probebetas[,each], use="complete"),3)
       
 			plot(probebetas[,"Whole.Blood"], probebetas[,each],  xlab="Whole Blood", ylab = each, pch=20, col=cols[each], 
            cex.lab=1.4, cex.main=1.2, main=paste("r =",r))
 	}	  
-    
-  }, height=400, width=800)
+    }, height=300, width=800)
+  
   
 
   output$scattertitle2<-renderUI({paste("Co-variation between peripheral tissue types at ",input$probe)})
   
-  output$downloadtext <- renderText({paste("Download summary statistics for multiple CpGs", input$probe)})
+  output$downloadtext1 <- renderText({paste("Download summary statistics for multiple CpGs", input$probe)})
   
   
-  output$downloaddata <- downloadHandler(
+  output$downloaddata1 <- downloadHandler(
     filename = function(){
       paste(input$probe, ".csv", sep="")},
     
     content = function(filename){
       write.csv(summarydata(), file=filename, row.names = FALSE)},
+    
+    contentType = "text/csv"
+    
+  )
+  
+   output$downloadtext2 <- renderText({"Download summary statistics for multiple CpGs"})
+  
+  
+  output$downloaddata2 <- downloadHandler(
+    filename = function(){
+	gsub(".csv", "_output.csv", basename(input$file1))},
+    
+    content = function(outfilename){
+      write.csv(batchdata(), file=filename, row.names = FALSE)},
     
     contentType = "text/csv"
     
