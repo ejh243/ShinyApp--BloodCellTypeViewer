@@ -77,8 +77,7 @@ server <- function(input, output) {
 	colnames(probebetas)<-c("Buccal","B.cells","CD4.T.cells","CD8.T.cells","Monocytes","Whole.Blood","Granulocytes","Nasal")
 	probebetas<-as.data.frame(probebetas[,celltypes])
     return(probebetas)
-  })
-  
+  }) 
   
   summarydata<-reactive({
     tmp<-dbGetQuery(my_db, 'SELECT * FROM sumStats WHERE row_names == ?', params = c(input$probe))
@@ -91,7 +90,31 @@ server <- function(input, output) {
     return(tmp)
   })
   
- 
+  output$downloadtext1 <- renderText({paste("Download summary statistics for CpG:", input$probe)})
+  
+  output$downloaddata1 <- downloadHandler(
+    filename = function(){
+      paste(input$probe, ".csv", sep="")},
+    
+    content = function(filename){
+      write.csv(summarydata(), file=filename, row.names = FALSE)},
+    
+    contentType = "text/csv"
+    
+  )
+  
+   output$downloadtext2 <- renderText({"Download summary statistics for multiple CpGs"})
+   
+  output$downloaddata2 <- downloadHandler(
+    filename = function(){
+	gsub(".csv", "_output.csv", basename(input$file1))},
+    
+    content = function(outfilename){
+      write.csv(batchdata(), file=filename, row.names = FALSE)},
+    
+    contentType = "text/csv"
+    
+  )
   
   cols<-rainbow(8) 
   names(cols)<-celltypes
@@ -111,7 +134,6 @@ server <- function(input, output) {
     probebetas<-findprobebetas()
     for (each in c("B.cells","CD4.T.cells","CD8.T.cells","Granulocytes","Monocytes")){
 		r<-signif(cor(probebetas[,"Whole.Blood"], probebetas[,each], use="complete"),3)
-      
 		plot(probebetas[,"Whole.Blood"], probebetas[,each],  xlab="Whole Blood", ylab = each, pch=20, col=cols[each], 
            cex.lab=1.4, cex.main=1.2, main=paste("r =",r))
 	}
@@ -124,44 +146,15 @@ server <- function(input, output) {
     probebetas<-findprobebetas()
     for (each in c("Buccal", "Nasal")){
             
-			r<-signif(cor(probebetas[,"Whole.Blood"], probebetas[,each], use="complete"),3)
-      
-			plot(probebetas[,"Whole.Blood"], probebetas[,each],  xlab="Whole Blood", ylab = each, pch=20, col=cols[each], 
+		r<-signif(cor(probebetas[,"Whole.Blood"], probebetas[,each], use="complete"),3)
+		plot(probebetas[,"Whole.Blood"], probebetas[,each],  xlab="Whole Blood", ylab = each, pch=20, col=cols[each], 
            cex.lab=1.4, cex.main=1.2, main=paste("r =",r))
 	}	  
     }, height=300, width=800)
   
-  
-
   output$scattertitle2<-renderUI({paste("Co-variation between peripheral tissue types at ",input$probe)})
   
-  output$downloadtext1 <- renderText({paste("Download summary statistics for multiple CpGs", input$probe)})
-  
-  
-  output$downloaddata1 <- downloadHandler(
-    filename = function(){
-      paste(input$probe, ".csv", sep="")},
-    
-    content = function(filename){
-      write.csv(summarydata(), file=filename, row.names = FALSE)},
-    
-    contentType = "text/csv"
-    
-  )
-  
-   output$downloadtext2 <- renderText({"Download summary statistics for multiple CpGs"})
-  
-  
-  output$downloaddata2 <- downloadHandler(
-    filename = function(){
-	gsub(".csv", "_output.csv", basename(input$file1))},
-    
-    content = function(outfilename){
-      write.csv(batchdata(), file=filename, row.names = FALSE)},
-    
-    contentType = "text/csv"
-    
-  )
+ 
 }
 
 # Run the application 
