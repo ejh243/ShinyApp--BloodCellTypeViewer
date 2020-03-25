@@ -96,32 +96,6 @@ server <- function(input, output) {
     }, height=300, width=800)
   
   output$boxplottitle<-renderUI({paste("Distribution of DNA Methylation levels at ",input$probe,"across cell & tissue types")})
-
-  
-  output$scatterplots1 <- renderPlot({
-    par(mfrow=c(2,3))
-    probebetas<-findprobebetas()
-    for (each in c("B.cells","CD4.T.cells","CD8.T.cells","Granulocytes","Monocytes")){
-		r<-signif(cor(probebetas[,"Whole.Blood"], probebetas[,each], use="complete"),3)
-		plot(probebetas[,"Whole.Blood"], probebetas[,each],  xlab="Whole Blood", ylab = each, pch=20, col=cols[each], 
-           cex.lab=1.4, cex.main=1.2, main=paste("r =",r))
-	}
-	}, height=600, width=800)
-	
-  output$scattertitle1<-renderUI({paste("Co-variation between whole blood and blood cell types at ",input$probe)})
-	  
-  output$scatterplots2 <- renderPlot({
-    par(mfrow=c(1,3))
-    probebetas<-findprobebetas()
-    for (each in c("Buccal", "Nasal")){
-            
-		r<-signif(cor(probebetas[,"Whole.Blood"], probebetas[,each], use="complete"),3)
-		plot(probebetas[,"Whole.Blood"], probebetas[,each],  xlab="Whole Blood", ylab = each, pch=20, col=cols[each], 
-           cex.lab=1.4, cex.main=1.2, main=paste("r =",r))
-	}	  
-    }, height=300, width=800)
-  
-  output$scattertitle2<-renderUI({paste("Co-variation between peripheral tissue types at ",input$probe)})
   
  
 }
