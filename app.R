@@ -20,8 +20,8 @@ ui<- dashboardPage(
                 br(),br(),
                 "The DNA methylation data behind this tool were generated with Illumina EPIC array data from 30 individuals. Each participant provided a whole blood, buccal epithelial and nasal epithelial sample. Whole blood samples were processed using fluorescence-activated cell sorting (FACS) to purify and isolate five cell-types (monocytes, granulocytes, CD4 T-cells, CD8 T-cells, and B-cells). These data are described in our manuscript which is currently under review.",
                 br(),br(),
-                textInput("probe", "EPIC array CpG ID:", value="cg10142008"),
-				textOutput("downloadtext"),
+                textInput("probe", "EPIC array CpG ID:", value="cg00000158"),
+				textOutput("downloadtext1"),
               HTML("<br/>"),
               downloadButton("downloaddata1","Download summary statistics")
   
@@ -35,7 +35,7 @@ ui<- dashboardPage(
                 accept = c("text/csv",
                          "text/comma-separated-values,text/plain",
                          ".csv")),
-              textOutput("downloadtext"),
+              textOutput("downloadtext2"),
               HTML("<br/>"),
               downloadButton("downloaddata2","Download summary statistics")
             )
@@ -44,18 +44,13 @@ ui<- dashboardPage(
       column(width = 8,
              box(
                title=uiOutput("boxplottitle"), width = NULL, height=370,
-               withSpinner(plotOutput("boxplot"))
-             ),
-             
+               plotOutput("boxplot", height = "320px")
+             ) ,            
              box(
                title=uiOutput("scattertitle1"), width=NULL, height=500,
-               withSpinner(plotOutput("scatterplots1"))
-             ),
-	     box(
-               title=uiOutput("scattertitle2"), width=NULL, height=250,
-               withSpinner(plotOutput("scatterplots2"))
-             )
-	     
+               withSpinner(plotOutput("scatterplots1", height = "475px"))
+             )  
+            	     
           )
     )
   )
@@ -72,16 +67,16 @@ server <- function(input, output) {
 	names(officialnames)<-celltypes
   
   findprobebetas<-reactive({
-    dat<-unlist(dbGetQuery(my_db, paste0("SELECT * FROM dnam WHERE row_names == ?"), params = c(input$probe))[-1])
-	probebetas<-matrix(dat, ncol = length(celltypes))
+   dat<-unlist(dbGetQuery(my_db, "SELECT * FROM dnam WHERE row_names == ?", params = c(input$probe))[-1])
+        probebetas<-matrix(dat, ncol = length(celltypes))
 	colnames(probebetas)<-c("Buccal","B.cells","CD4.T.cells","CD8.T.cells","Monocytes","Whole.Blood","Granulocytes","Nasal")
 	probebetas<-as.data.frame(probebetas[,celltypes])
     return(probebetas)
   }) 
   
   summarydata<-reactive({
-    tmp<-dbGetQuery(my_db, 'SELECT * FROM sumStats WHERE row_names == ?', params = c(input$probe))
-    return(tmp)
+   tmp<-dbGetQuery(my_db, 'SELECT * FROM sumStats WHERE row_names == ?', params = c(input$probe))
+  return(tmp)
   })
   
   
@@ -91,12 +86,23 @@ server <- function(input, output) {
   output$boxplot <- renderPlot({
     par(mar=c(2,4,1,1))
     probebetas<-findprobebetas()
-    boxplot(probebetas, use.cols=FALSE, names=officialnames, ylab="DNA Methylation", main="", col=cols)
+    boxplot(probebetas, ylab = "DNA methylation", col = cols, names=officialnames)
   
-    }, height=300, width=800)
+    })
   
   output$boxplottitle<-renderUI({paste("Distribution of DNA Methylation levels at ",input$probe,"across cell & tissue types")})
   
+ output$scatterplots1 <- renderPlot({
+    par(mfrow=c(2,3))
+    probebetas<-findprobebetas()
+    for (each in c("B.cells","CD4.T.cells","CD8.T.cells","Granulocytes","Monocytes")){
+		r<-signif(cor(probebetas[,"Whole.Blood"], probebetas[,each], use="complete"),3)
+		plot(probebetas[,"Whole.Blood"], probebetas[,each],  xlab="Whole Blood", ylab = each, pch=20, col=cols[each], 
+           cex.lab=1.4, cex.main=1.2, main=paste("r =",r))
+	}
+	}, height=600, width=800)
+	
+  output$scattertitle1<-renderUI({paste("Co-variation between whole blood and blood cell types at ",input$probe)})
  
 }
 
