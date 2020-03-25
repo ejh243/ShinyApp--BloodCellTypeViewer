@@ -84,37 +84,6 @@ server <- function(input, output) {
     return(tmp)
   })
   
-  batchdata<-reactive({
-	dat<-read.csv(input$file1$datapath, stringsAsFactors = FALSE, row.names = NULL)
-	tmp<-dbGetQuery(my_db, 'SELECT * FROM sumStats WHERE row_names == ?', params = list(x = dat[,1]))
-    return(tmp)
-  })
-  
-  output$downloadtext1 <- renderText({paste("Download summary statistics for CpG:", input$probe)})
-  
-  output$downloaddata1 <- downloadHandler(
-    filename = function(){
-      paste(input$probe, ".csv", sep="")},
-    
-    content = function(filename){
-      write.csv(summarydata(), file=filename, row.names = FALSE)},
-    
-    contentType = "text/csv"
-    
-  )
-  
-   output$downloadtext2 <- renderText({"Download summary statistics for multiple CpGs"})
-   
-  output$downloaddata2 <- downloadHandler(
-    filename = function(){
-	gsub(".csv", "_output.csv", basename(input$file1))},
-    
-    content = function(outfilename){
-      write.csv(batchdata(), file=filename, row.names = FALSE)},
-    
-    contentType = "text/csv"
-    
-  )
   
   cols<-rainbow(8) 
   names(cols)<-celltypes
