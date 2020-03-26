@@ -30,13 +30,23 @@ ui<- dashboardPage(
              box(
                title = "Batch Query", width = NULL,
                
-				fileInput("file1", "Choose CSV file with list of CpG identifiers",
+		fileInput("file1", "Choose CSV file with list of CpG identifiers",
                 multiple = FALSE,
                 accept = c("text/csv",
                          "text/comma-separated-values,text/plain",
                          ".csv")),
-                downloadButton("downloaddata2","Download summary statistics")
+		
+		checkboxInput("header","Header", value = FALSE, width = NULL),
+		checkboxInput("rownames","Rownames", value = FALSE, width = NULL),
+                downloadButton("downloaddata2","Download summary statistics for uploaded file")
+            ),
+
+             box(
+               title = "Summary Stats Output", width = NULL,
+		tableOutput('tbl')
+
             )
+
           ),
 
       column(width = 8,
@@ -45,11 +55,11 @@ ui<- dashboardPage(
                plotOutput("boxplot", height = "320px")
              ) ,            
              box(
-               title=uiOutput("scattertitle1"), width=NULL, height=500,
-               withSpinner(plotOutput("scatterplots1", height = "450px"))
+               title=uiOutput("scattertitle1"), width=NULL, height=550,
+               withSpinner(plotOutput("scatterplots1", height = "500px"))
              ) ,
 	     box(
-               title=uiOutput("scattertitle2"), width=NULL, height=250,
+               title=uiOutput("scattertitle2"), width=NULL, height=300,
                withSpinner(plotOutput("scatterplots2", height = "250px"))
              )
 
@@ -61,6 +71,8 @@ ui<- dashboardPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+	colInfo<-read.csv("Data/columnHeaders.csv", header = FALSE)
+	colnames(colInfo)<-c("Header", "Contents")
 	my_db_file <- "Data/BloodCellType.sqlite"
 	my_db <- dbConnect(RSQLite::SQLite(), my_db_file)
 	
@@ -131,16 +143,21 @@ output$downloadtext1 <- renderText({paste("Download summary statistics for CpG:"
   )
 
 batchquery<-reactive({
-df <- read.csv(input$file1$datapath)
+if(input$rownames == TRUE){
+	rowN=1
+} else {
+	rowN=NULL
+}
+df <- read.csv(input$file1$datapath,header = input$header, row.names = rowN)
         tmp<-dbGetQuery(my_db, 'SELECT * FROM sumStats WHERE row_names == ?',
-        params = list(c("cg25643253","cg26276667","cg13039199","cg14836555")))
+        params = list(df[,1]))
 	return(tmp)
 })
 
   output$downloaddata2 <- downloadHandler(
 	
    filename = function(){
-      paste("sumstats", input$file1$datapath, sep="_")},
+      paste("sumstats", input$file1$name, sep="_")},
 
     content = function(file){
       write.csv(batchquery(),file, row.names = FALSE)},
@@ -148,7 +165,7 @@ df <- read.csv(input$file1$datapath)
     contentType = "text/csv"
 
   )
-
+output$tbl <- renderTable({ colInfo })
 
 }
 
