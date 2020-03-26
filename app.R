@@ -82,6 +82,10 @@ server <- function(input, output) {
   
   findprobebetas<-reactive({
    dat<-unlist(dbGetQuery(my_db, "SELECT * FROM dnam WHERE row_names == ?", params = c(input$probe))[-1])
+	validate(
+                need(length(dat) > 0, "CpG ID not found please try another")
+        )
+
         probebetas<-matrix(dat, ncol = length(celltypes))
 	colnames(probebetas)<-c("Buccal","B.cells","CD4.T.cells","CD8.T.cells","Monocytes","Whole.Blood","Granulocytes","Nasal")
 	probebetas<-as.data.frame(probebetas[,celltypes])
