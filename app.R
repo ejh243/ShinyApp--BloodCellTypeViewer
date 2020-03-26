@@ -35,9 +35,7 @@ ui<- dashboardPage(
                 accept = c("text/csv",
                          "text/comma-separated-values,text/plain",
                          ".csv")),
-              textOutput("downloadtext2"),
-              HTML("<br/>"),
-              downloadButton("downloaddata2","Download summary statistics")
+                downloadButton("downloaddata2","Download summary statistics")
             )
           ),
 
@@ -48,8 +46,13 @@ ui<- dashboardPage(
              ) ,            
              box(
                title=uiOutput("scattertitle1"), width=NULL, height=500,
-               withSpinner(plotOutput("scatterplots1", height = "475px"))
-             )  
+               withSpinner(plotOutput("scatterplots1", height = "450px"))
+             ) ,
+	     box(
+               title=uiOutput("scattertitle2"), width=NULL, height=250,
+               withSpinner(plotOutput("scatterplots2", height = "250px"))
+             )
+
             	     
           )
     )
@@ -60,7 +63,6 @@ ui<- dashboardPage(
 server <- function(input, output) {
 	my_db_file <- "Data/BloodCellType.sqlite"
 	my_db <- dbConnect(RSQLite::SQLite(), my_db_file)
-	#probeID <- "cg00000158"
 	
 	celltypes<-c("Buccal", "Nasal", "Whole.Blood", "B.cells","CD4.T.cells","CD8.T.cells","Granulocytes","Monocytes")
 	officialnames<-c("Buccal","Nasal","Whole Blood", "B-cells","CD4T-cells","CD8T-cells","Granulocytes","Monocytes")
@@ -78,7 +80,6 @@ server <- function(input, output) {
    tmp<-dbGetQuery(my_db, 'SELECT * FROM sumStats WHERE row_names == ?', params = c(input$probe))
   return(tmp)
   })
-  
   
   cols<-rainbow(8) 
   names(cols)<-celltypes
@@ -100,10 +101,55 @@ server <- function(input, output) {
 		plot(probebetas[,"Whole.Blood"], probebetas[,each],  xlab="Whole Blood", ylab = each, pch=20, col=cols[each], 
            cex.lab=1.4, cex.main=1.2, main=paste("r =",r))
 	}
-	}, height=600, width=800)
+	})
 	
   output$scattertitle1<-renderUI({paste("Co-variation between whole blood and blood cell types at ",input$probe)})
  
+ output$scatterplots2 <- renderPlot({
+    par(mfrow=c(1,3))
+    probebetas<-findprobebetas()
+    for (each in c("Buccal","Nasal")){
+                r<-signif(cor(probebetas[,"Whole.Blood"], probebetas[,each], use="complete"),3)
+                plot(probebetas[,"Whole.Blood"], probebetas[,each],  xlab="Whole Blood", ylab = each, pch=20, col=cols[each],
+           cex.lab=1.4, cex.main=1.2, main=paste("r =",r))
+        }
+        })
+
+  output$scattertitle2<-renderUI({paste0("Co-variation between peripheral tissues at ",input$probe)})
+
+output$downloadtext1 <- renderText({paste("Download summary statistics for CpG:", input$probe)})
+  
+  output$downloaddata1 <- downloadHandler(
+    filename = function(){
+      paste(input$probe, ".csv", sep="")},
+    
+    content = function(file){
+      write.csv(summarydata(), file, row.names = FALSE)},
+    
+    contentType = "text/csv"
+    
+  )
+
+batchquery<-reactive({
+df <- read.csv(input$file1$datapath)
+        tmp<-dbGetQuery(my_db, 'SELECT * FROM sumStats WHERE row_names == ?',
+        params = list(c("cg25643253","cg26276667","cg13039199","cg14836555")))
+	return(tmp)
+})
+
+  output$downloaddata2 <- downloadHandler(
+	
+   filename = function(){
+      paste("sumstats", input$file1$datapath, sep="_")},
+
+    content = function(file){
+      write.csv(batchquery(),file, row.names = FALSE)},
+
+    contentType = "text/csv"
+
+  )
+
+
 }
 
 # Run the application 
